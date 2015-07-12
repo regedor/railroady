@@ -8,6 +8,8 @@
 # RailRoady diagram structure
 class DiagramGraph
 
+  attr_reader :edges
+
   def initialize
     @diagram_type = ''
     @show_label   = false
@@ -22,6 +24,11 @@ class DiagramGraph
 
   def add_edge(edge)
     @edges << edge
+  end
+
+  def delete_similar_edge(similar)
+    i = @edges.index { |edge| (similar - edge).empty? }
+    i && @edges.delete_at(i)
   end
 
   def diagram_type= (type)
@@ -86,7 +93,7 @@ class DiagramGraph
            options += attributes.sort_by { |s| @alphabetize ? s : nil }.join('\l')
            options += '\l}"'
       when 'model-brief'
-           options = ''
+           options = 'shape=oval, style=filled, fillcolor="#aaaaaa"'
       when 'class'
            options = 'shape=record, label="{' + name + '|}"'
       when 'class-brief'
@@ -107,6 +114,26 @@ class DiagramGraph
            # Return subgraph format
            return "subgraph cluster_#{name.downcase} {\n\tlabel = #{quote(name)}\n\t#{attributes.join("\n  ")}}"
     end # case
+
+    if name == "User" 
+      options += ', style=filled, fillcolor="#000000", fontcolor="#FFFFFF"'
+    elsif name.start_with?("Coach") 
+      options += ', style=filled, fillcolor="#000000", fontcolor="#FFFFFF"'
+    elsif name.start_with?("User") 
+      options += ', style=filled, fillcolor="#41A8F1"' 
+    elsif name.start_with?("Facebook") 
+      options += ', style=filled, fillcolor="#2A6D9E"' 
+    elsif name.start_with?("Payment") 
+      options += ', style=filled, fillcolor="#487F2D"' 
+    elsif name.start_with?("Nutrition") 
+      options += ', style=filled, fillcolor="#B2BB6D"' 
+    elsif name.start_with?("Referral") 
+      options += ', style=filled, fillcolor="#ED9EDD"' 
+    elsif name.start_with?("Notification") 
+      options += ', style=filled, fillcolor="#FF5748"' 
+    end
+
+
     options = [options, custom_options].compact.join(', ')
     return "\t#{quote(name)} [#{options}]\n"
   end # dot_node
@@ -114,19 +141,43 @@ class DiagramGraph
   # Build a DOT graph edge
   def dot_edge(type, from, to, name = '')
     options =  name != '' ? "label=\"#{name}\", " : ''
-    edge_color = '"#%02X%02X%02X"' % [rand(255), rand(255), rand(255)]
-    suffix = ", dir=both color=#{edge_color}"
     case type
+
+      when 'one-?(belongs_to)'
+           options += 'arrowtail=dot,    arrowhead=none ,  dir=both color="#000000", penwidth=1'
+
       when 'one-one'
-           options += "arrowtail=odot, arrowhead=dot" + suffix
+           options += 'arrowtail=dot,    arrowhead=crow,   dir=both color="#2222FF", penwidth=1'
+      when 'one-one(has_one)'
+           options += 'arrowtail=odot,   arrowhead=crow ,  dir=both color="#2222FF", penwidth=3' 
+
       when 'one-many'
-           options += "arrowtail=odot, arrowhead=crow" + suffix
+           options += 'arrowtail=dot,    arrowhead=crow ,  dir=both color="#FF2222", penwidth=1' 
+      when 'one-many(has_many)'
+           options += 'arrowtail=odot,   arrowhead=crow ,  dir=both color="#FF2222", penwidth=3' #0 
+           
+      when 'one-one-and-many'
+           options += 'arrowtail=dot,    arrowhead=crow ,  dir=both color="#FF22FF", penwidth=1' 
+
+
       when 'many-many'
-           options += "arrowtail=crow, arrowhead=crow" + suffix
+        options += 'arrowtail=crow,    arrowhead=crow,   dir=both color="#22FF22", penwidth=1'
+      when 'many-many(uni)'
+        options += 'arrowtail=crow,    arrowhead=none,   dir=both color="#22FF22", penwidth=1'
+
+      #when 'one-many'
+      #     options += 'arrowtail=nomal,      arrowhead=dot,  dir=both color="#%02X%02X%02X"' % [000, 200, 000]
+      #when 'many-many'
+      #     options += 'arrowtail=crow,      arrowhead=crow,  dir=both color="#%02X%02X%02X"' % [100, 000, 000]
+      #when 'one-one(bt)'
+      #     options += 'arrowtail=odot,      arrowhead=none,  dir=both color="#%02X%02X%02X"' % [255, 000, 100]
+           
       when 'is-a'
-           options += 'arrowhead="none", arrowtail="onormal"'
+           options += 'arrowtail="onormal", arrowhead="none" dir=both color="#%02X%02X%02X"' % [222, 200, 000]
       when 'event'
            options += "fontsize=10"
+      else
+           options += 'arrowtail=none,    arrowhead=odot ,  dir=both color="#%02X%02X%02X"' % [256, 222, 222]
     end
     return "\t#{quote(from)} -> #{quote(to)} [#{options}]\n"
   end # dot_edge

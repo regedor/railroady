@@ -11,8 +11,6 @@ class ModelsDiagram < AppDiagram
   def initialize(options = OptionsStruct.new)
     super options
     @graph.diagram_type = 'Models'
-    # Processed habtm associations
-    @habtm = []
   end
 
   # Process model files
@@ -287,28 +285,62 @@ class ModelsDiagram < AppDiagram
       assoc_name = ''
     else
       assoc_name = assoc.name.to_s
+      assoc_name = ''
     end
 
     # Patch from "alpack" to support classes in a non-root module namespace. See: http://disq.us/yxl1v
-    if class_name.include?("::") && !assoc_class_name.include?("::")
-      assoc_class_name = class_name.split("::")[0..-2].push(assoc_class_name).join("::")
-    end
+    #if class_name.include?("::") && !assoc_class_name.include?("::")
+    #  assoc_class_name = class_name.split("::")[0..-2].push(assoc_class_name).join("::")
+    #end
     assoc_class_name.gsub!(%r{^::}, '')
 
-    if %w[has_one references_one embeds_one].include?(macro)
-      assoc_type = 'one-one'
-    elsif macro == 'has_many' && (!assoc.options[:through]) ||
-          %w[references_many embeds_many].include?(macro)
-      assoc_type = 'one-many'
-    else # habtm or has_many, :through
-      # Add FAKE associations too in order to understand mistakes
-      return if @habtm.include? [assoc_class_name, class_name, assoc_name]
-      assoc_type = 'many-many'
-      @habtm << [class_name, assoc_class_name, assoc_name]
+    if macro == 'belongs_to'
+      #STDERR.puts "#{assoc_class_name} #{class_name}"
+      if    (edge=@graph.delete_similar_edge ['one-one(has_one)',      assoc_class_name, class_name])
+        new_edge = ['one-one',            class_name, assoc_class_name, assoc_name]
+      elsif (edge=@graph.delete_similar_edge ['one-many(has_many)',    assoc_class_name, class_name])
+        new_edge = ['one-many',           class_name, assoc_class_name, assoc_name]
+      elsif (edge=@graph.delete_similar_edge ['one-one-and-many(has)', assoc_class_name, class_name])
+        raise
+        new_edge = ['one-one-and-many',   class_name, assoc_class_name, assoc_name]
+      else
+        new_edge = ['one-?(belongs_to)',  class_name, assoc_class_name, assoc_name]
+      end
+
+    elsif %w[has_one references_one embeds_one].include?(macro)
+      if    (edge=@graph.delete_similar_edge ['one-many',           assoc_class_name, class_name])
+        new_edge = ['one-one-and-many',        assoc_class_name, class_name, assoc_name]
+      elsif (edge=@graph.delete_similar_edge ['one-many(has_many)', assoc_class_name, class_name])
+        raise
+        new_edge = ['one-one-and-many(has)',   assoc_class_name, class_name, assoc_name]
+      elsif (edge=@graph.delete_similar_edge ['one-?(belongs_to)',  assoc_class_name, class_name])
+        new_edge = ['one-one',                 assoc_class_name, class_name, assoc_name]
+      else
+        new_edge = ['one-one(has_one)',        assoc_class_name, class_name, assoc_name]
+      end
+
+    elsif macro == 'has_many' && (!assoc.options[:through]) || %w[references_many embeds_many].include?(macro)
+      if    (edge=@graph.delete_similar_edge ['one-one', assoc_class_name, class_name])
+        raise
+        new_edge = ['one-one-and-many',   assoc_class_name, class_name, assoc_name]
+      elsif (edge=@graph.delete_similar_edge ['one-one(has_one)', assoc_class_name, class_name])
+        raise
+        new_edge = ['one-one-and-many(has)',   assoc_class_name, class_name, assoc_name]
+      elsif (edge=@graph.delete_similar_edge ['one-?(belongs_to)', assoc_class_name, class_name])
+        new_edge = ['one-many',           assoc_class_name, class_name, assoc_name]
+      else
+        new_edge = ['one-many(has_many)', assoc_class_name, class_name, assoc_name]
+      end
+
+     else # has_many, :through
+      if (edge=@graph.delete_similar_edge ['many-many(uni)', assoc_class_name, class_name])
+        new_edge = ['many-many', class_name, assoc_class_name, assoc_name]
+      else
+        new_edge = ['many-many(uni)', class_name, assoc_class_name, assoc_name]
+      end
     end
-    # from patch #12384
-    # @graph.add_edge [assoc_type, class_name, assoc.class_name, assoc_name]
-    @graph.add_edge [assoc_type, class_name, assoc_class_name, assoc_name]
+
+    @graph.add_edge new_edge 
   end # process_association
 
   # Process a DataMapper relationship
