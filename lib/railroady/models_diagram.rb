@@ -22,12 +22,12 @@ class ModelsDiagram < AppDiagram
       rescue Exception
         STDERR.puts "Warning: exception #{$!} raised while trying to load model class #{f}"
       end
-      
+
     end
   end
 
   def get_files(prefix ='')
-    files = !@options.specify.empty? ? Dir.glob(@options.specify) : Dir.glob(prefix + "app/models/**/*.rb")
+    files = @options.specify.empty? ? Dir.glob(prefix + "app/models/**/*.rb") : Dir.glob(@options.specify)
     files += Dir.glob("vendor/plugins/**/app/models/*.rb") if @options.plugins_models
     files -= Dir.glob(prefix + "app/models/concerns/**/*.rb") unless @options.include_concerns
     files += get_engine_files if @options.engine_models
@@ -44,7 +44,7 @@ class ModelsDiagram < AppDiagram
     filename.match(/.*\/models\/(.*).rb$/)[1].camelize
   end
 
-  
+
   # Process a model class
   def process_class(current_class)
     STDERR.puts "Processing #{current_class}" if @options.verbose
@@ -340,7 +340,7 @@ class ModelsDiagram < AppDiagram
       end
     end
 
-    @graph.add_edge new_edge 
+    @graph.add_edge new_edge
   end # process_association
 
   # Process a DataMapper relationship
