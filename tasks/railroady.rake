@@ -26,20 +26,20 @@ module RailRoady
     def self.sed
       regex = 's/\x1B\[([0-9]{1,2}(;[0-9]{1,2})?)?[m|K]//g'
       case RbConfig::CONFIG['host_os']
-      when /linux|cygwin|mingw/
+      when /linux/
         return "sed -r '#{regex}'"
+      when /mswin|msys|mingw|cygwin|bccwin|wince|emc/
+        return "sed -r \"#{regex}\""
       when /mac|darwin|bsd/
         return "sed -E '#{regex}'"
       else
-        raise NotImplementedError
+        fail NotImplementedError
       end
     end
-
   end
 end
 
 namespace :diagram do
-
   @MODELS_ALL         = RailRoady::RakeHelpers.full_path("models_complete.#{RailRoady::RakeHelpers.format}").freeze
   @MODELS_BRIEF       = RailRoady::RakeHelpers.full_path("models_brief.#{RailRoady::RakeHelpers.format}").freeze
   @CONTROLLERS_ALL    = RailRoady::RakeHelpers.full_path("controllers_complete.#{RailRoady::RakeHelpers.format}").freeze
@@ -49,16 +49,15 @@ namespace :diagram do
   namespace :setup do
     desc 'Perform any setup needed for the gem'
     task :create_new_doc_folder_if_needed do
-      Dir.mkdir('doc') unless File.exists?('doc')
+      Dir.mkdir('doc') unless File.exist?('doc')
     end
   end
 
   namespace :models do
-
     desc 'Generated brief and complete class diagrams for all models.'
-    task :all => ['diagram:setup:create_new_doc_folder_if_needed', 'diagram:models:complete', 'diagram:models:brief']
+    task all: ['diagram:setup:create_new_doc_folder_if_needed', 'diagram:models:complete', 'diagram:models:brief']
 
-    desc 'Generates an class diagram for all models.'
+    desc 'Generates a class diagram for all models.'
     task :complete do
       f = @MODELS_ALL
       puts "Generating #{f}"
@@ -72,29 +71,26 @@ namespace :diagram do
       sh "railroady -blamM | #{@SED} | dot -T#{RailRoady::RakeHelpers.format} > #{f}"
     end
 
-    desc 'Generates an class diagram for all models including those in engines'
+    desc 'Generates a class diagram for all models including those in engines'
     task :complete_with_engines do
       f = @MODELS_ALL
       puts "Generating #{f}"
       sh "railroady -ilamzM | #{@SED} | dot -T#{RailRoady::RakeHelpers.format} > #{f}"
     end
-    
+
     desc 'Generates an abbreviated class diagram for all models including those in engines'
     task :brief_with_engines do
       f = @MODELS_BRIEF
       puts "Generating #{f}"
       sh "railroady -bilamzM | #{@SED} | dot -T#{RailRoady::RakeHelpers.format} > #{f}"
     end
-
-
   end
 
   namespace :controllers do
-    
     desc 'Generated brief and complete class diagrams for all controllers.'
-    task :all => ['diagram:setup:create_new_doc_folder_if_needed', 'diagram:controllers:complete', 'diagram:controllers:brief']
+    task all: ['diagram:setup:create_new_doc_folder_if_needed', 'diagram:controllers:complete', 'diagram:controllers:brief']
 
-    desc 'Generates an class diagram for all controllers.'
+    desc 'Generates a class diagram for all controllers.'
     task :complete do
       f = @CONTROLLERS_ALL
       puts "Generating #{f}"
@@ -107,40 +103,37 @@ namespace :diagram do
       puts "Generating #{f}"
       sh "railroady -blC | #{@SED} | neato -T#{RailRoady::RakeHelpers.format} > #{f}"
     end
-    
-    desc 'Generates an class diagram for all controllers including those in engines'
-    task :complete_with_engines do 
+
+    desc 'Generates a class diagram for all controllers including those in engines'
+    task :complete_with_engines do
       f = @CONTROLLERS_ALL
       puts "Generating #{f}"
       sh "railroady -ilC --engine-controllers | #{@SED} | neato -T#{RailRoady::RakeHelpers.format} > #{f}"
     end
-    
+
     desc 'Generates an abbreviated class diagram for all controllers including those in engines.'
     task :brief_with_engines do
       f = @CONTROLLERS_BRIEF
       puts "Generating #{f}"
       sh "railroady -bilC --engine-controllers | #{@SED} | neato -T#{RailRoady::RakeHelpers.format} > #{f}"
     end
-
-    
   end
 
   desc 'Generates all class diagrams.'
   task all: [
-             'diagram:setup:create_new_doc_folder_if_needed',
-             'diagram:models:complete',
-             'diagram:models:brief',
-             'diagram:controllers:complete',
-             'diagram:controllers:brief'
-            ]
+    'diagram:setup:create_new_doc_folder_if_needed',
+    'diagram:models:complete',
+    'diagram:models:brief',
+    'diagram:controllers:complete',
+    'diagram:controllers:brief'
+  ]
 
   desc 'Generates all class diagrams including those in engines'
   task all_with_engines: [
-             'diagram:setup:create_new_doc_folder_if_needed',
-             'diagram:models:complete_with_engines',
-             'diagram:models:brief_with_engines',
-             'diagram:controllers:complete_with_engines',
-             'diagram:controllers:brief_with_engines'
-            ]
-
+    'diagram:setup:create_new_doc_folder_if_needed',
+    'diagram:models:complete_with_engines',
+    'diagram:models:brief_with_engines',
+    'diagram:controllers:complete_with_engines',
+    'diagram:controllers:brief_with_engines'
+  ]
 end
